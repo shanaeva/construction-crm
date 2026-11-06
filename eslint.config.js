@@ -18,5 +18,12 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      curly: ['error', 'all'],
+      'padding-line-between-statements': [
+        'error',
+        { blankLine: 'always', prev: '*', next: 'if' },
+      ],
+    },
   },
 ])
