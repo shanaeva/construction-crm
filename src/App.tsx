@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
-import type { UserProfile } from "./types";
-import { Profile } from "./components/Profile";
+import type { ConstructionObject, UserProfile } from "./types";
+import { ObjectsList } from "./components/ObjectsList";
+import { ObjectDetails } from "./components/ObjectDetails";
 
 const App = () => {
   const [email, setEmail] = useState("");
@@ -10,6 +11,24 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [objects, setObjects] = useState<ConstructionObject[]>([]);
+  const [selectedObject, setSelectedObject] =
+    useState<ConstructionObject | null>(null);
+
+  const getObjects = async () => {
+    const { data: objectsData, error: objectsError } = await supabase
+      .from("objects")
+      .select("id, name, address, created_at")
+      .order("created_at", { ascending: false });
+
+    if (objectsError) {
+      console.error("Objects error:", objectsError.message);
+      setErrorMessage("Could not load objects. Please try again.");
+      return;
+    }
+
+    setObjects(objectsData);
+  };
 
   const getProfile = async (authUserId: string) => {
     const { data: profile, error: profileError } = await supabase
@@ -26,6 +45,7 @@ const App = () => {
       return;
     }
     setUserProfile(profile);
+    await getObjects();
   };
 
   useEffect(() => {
@@ -88,6 +108,7 @@ const App = () => {
     }
 
     setUserProfile(null);
+    setSelectedObject(null);
     setErrorMessage("");
   };
 
@@ -100,7 +121,26 @@ const App = () => {
   }
 
   if (userProfile) {
-    return <Profile profile={userProfile} onLogout={handleLogout} />;
+    if (selectedObject) {
+      return (
+        <ObjectDetails
+          object={selectedObject}
+          profile={userProfile}
+          onBack={() => setSelectedObject(null)}
+          onLogout={handleLogout}
+        />
+      );
+    }
+
+    return (
+      <ObjectsList
+        profile={userProfile}
+        objects={objects}
+        errorMessage={errorMessage}
+        onLogout={handleLogout}
+        onSelectObject={setSelectedObject}
+      />
+    );
   }
 
   return (
