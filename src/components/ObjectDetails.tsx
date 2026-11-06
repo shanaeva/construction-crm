@@ -5,6 +5,7 @@ import type {
   ConstructionTask,
   UserProfile,
 } from "../types";
+import { CreateTaskForm } from "./CreateTaskForm";
 
 type Props = {
   object: ConstructionObject;
@@ -17,7 +18,6 @@ export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
   const [tasks, setTasks] = useState<ConstructionTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-
   useEffect(() => {
     let isCurrent = true;
 
@@ -50,6 +50,21 @@ export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
       isCurrent = false;
     };
   }, [object.id]);
+
+  const refreshTasks = async () => {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("id, title, description, status")
+      .eq("object_id", object.id);
+
+    if (error) {
+      console.error("Refresh tasks error:", error.message);
+      setErrorMessage("Task created, but the task list could not be refreshed.");
+    } else {
+      setTasks(data);
+      setErrorMessage("");
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#f5f7f3] px-4 py-10 text-[#263541] sm:px-6">
@@ -90,9 +105,17 @@ export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
         </section>
 
         <section aria-labelledby="tasks-title">
-          <h2 id="tasks-title" className="mb-4 text-xl font-semibold">
-            Tasks
-          </h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 id="tasks-title" className="text-xl font-semibold">
+              Tasks
+            </h2>
+            <CreateTaskForm
+              objectId={object.id}
+              authorId={profile.id}
+              canCreate={profile.role === "manager"}
+              onCreated={refreshTasks}
+            />
+          </div>
 
           {errorMessage && (
             <p

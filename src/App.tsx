@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { supabase } from "./lib/supabaseClient";
 import type { ConstructionObject, UserProfile } from "./types";
 import { ObjectsList } from "./components/ObjectsList";
@@ -109,6 +109,7 @@ const App = () => {
 
     setUserProfile(null);
     setSelectedObject(null);
+    setObjects([]);
     setErrorMessage("");
   };
 
@@ -166,7 +167,7 @@ const App = () => {
 
         <form
           className="space-y-5"
-          onSubmit={(event) => {
+          onSubmit={(event: SubmitEvent<HTMLFormElement>) => {
             event.preventDefault();
             void handleLogin();
           }}
