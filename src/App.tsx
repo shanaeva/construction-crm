@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import type { UserProfile } from "./types";
 import { Profile } from "./components/Profile";
@@ -6,6 +6,7 @@ import { Profile } from "./components/Profile";
 const App = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -26,6 +27,25 @@ const App = () => {
     }
     setUserProfile(profile);
   };
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error("Session restore error:", error.message);
+        setErrorMessage(
+          "Could not restore your session. Please sign in again.",
+        );
+      } else if (data.session?.user) {
+        await getProfile(data.session.user.id);
+      }
+
+      setIsInitializing(false);
+    };
+
+    restoreSession();
+  }, []);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -70,6 +90,14 @@ const App = () => {
     setUserProfile(null);
     setErrorMessage("");
   };
+
+  if (isInitializing) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f5f7f3] px-4 text-[#65737c]">
+        <p role="status">Restoring your session…</p>
+      </main>
+    );
+  }
 
   if (userProfile) {
     return <Profile profile={userProfile} onLogout={handleLogout} />;
