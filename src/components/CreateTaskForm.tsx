@@ -166,22 +166,42 @@ export const CreateTaskForm = ({
               Executor{" "}
               <span className="font-normal text-[#65737c]">(optional)</span>
             </label>
-            <select
-              id="task-executor"
-              value={executorId}
-              onChange={(event) => setExecutorId(event.target.value)}
-              disabled={isLoadingExecutors}
-              className="block w-full rounded-xl border border-[#cfd9d1] bg-[#fbfcfa] px-3.5 py-3 text-sm outline-none focus:border-[#52775c] focus:ring-4 focus:ring-[#dceade] disabled:opacity-60"
-            >
-              <option value="">
-                {isLoadingExecutors ? "Loading executors…" : "Unassigned"}
-              </option>
-              {executors.map((executor) => (
-                <option key={executor.id} value={executor.id}>
-                  {executor.full_name}
+            <div className="relative">
+              <select
+                id="task-executor"
+                value={executorId}
+                onChange={(event) => setExecutorId(event.target.value)}
+                disabled={isLoadingExecutors}
+                className="block w-full appearance-none rounded-xl border border-[#cfd9d1] bg-[#fbfcfa] py-3 pl-3.5 pr-10 text-sm text-[#263541] outline-none transition focus:border-[#52775c] focus:ring-4 focus:ring-[#dceade] disabled:opacity-60"
+              >
+                <option value="" className="bg-white text-[#65737c]">
+                  {isLoadingExecutors ? "Loading executors…" : "Unassigned"}
                 </option>
-              ))}
-            </select>
+                {executors.map((executor) => (
+                  <option
+                    key={executor.id}
+                    value={executor.id}
+                    className="bg-white text-[#263541]"
+                  >
+                    {executor.full_name}
+                  </option>
+                ))}
+              </select>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                fill="none"
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#65737c]"
+              >
+                <path
+                  d="m5 7.5 5 5 5-5"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.7"
+                />
+              </svg>
+            </div>
           </div>
 
           {errorMessage && (

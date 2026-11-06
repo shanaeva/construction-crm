@@ -28,6 +28,7 @@ const App = () => {
     }
 
     setObjects(objectsData);
+    setErrorMessage("");
   };
 
   const getProfile = async (authUserId: string) => {
@@ -140,6 +141,7 @@ const App = () => {
         errorMessage={errorMessage}
         onLogout={handleLogout}
         onSelectObject={setSelectedObject}
+        onRefreshObjects={getObjects}
       />
     );
   }

@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { ConstructionObject, UserProfile } from "../types";
+import { CreateObjectForm } from "./CreateObjectForm";
 
 type Props = {
   profile: UserProfile;
@@ -6,6 +8,7 @@ type Props = {
   errorMessage: string;
   onLogout: () => void;
   onSelectObject: (object: ConstructionObject) => void;
+  onRefreshObjects: () => void;
 };
 
 export const ObjectsList = ({
@@ -14,7 +17,15 @@ export const ObjectsList = ({
   errorMessage,
   onLogout,
   onSelectObject,
+  onRefreshObjects,
 }: Props) => {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const handleObjectCreated = async () => {
+    setIsFormOpen(false);
+    await onRefreshObjects();
+  };
+
   return (
     <main className="min-h-screen bg-[#f5f7f3] px-4 py-10 text-[#263541] sm:px-6">
       <div className="mx-auto max-w-4xl">
@@ -28,14 +39,32 @@ export const ObjectsList = ({
               Signed in as {profile.full_name} ({profile.role})
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void onLogout()}
-            className="rounded-xl border border-[#cfd9d1] bg-white px-4 py-2.5 text-sm font-semibold text-[#42654c] transition hover:bg-[#f5f7f3] focus:outline-none focus:ring-4 focus:ring-[#dceade]"
-          >
-            Sign out
-          </button>
+          <div className="flex flex-wrap gap-3">
+            {profile.role === "manager" && !isFormOpen && (
+              <button
+                type="button"
+                onClick={() => setIsFormOpen(true)}
+                className="rounded-xl bg-[#52775c] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#42654c] focus:outline-none focus:ring-4 focus:ring-[#c9ddcc]"
+              >
+                Create object
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => void onLogout()}
+              className="rounded-xl border border-[#cfd9d1] bg-white px-4 py-2.5 text-sm font-semibold text-[#42654c] transition hover:bg-[#f5f7f3] focus:outline-none focus:ring-4 focus:ring-[#dceade]"
+            >
+              Sign out
+            </button>
+          </div>
         </header>
+
+        {isFormOpen && profile.role === "manager" && (
+          <CreateObjectForm
+            onCancel={() => setIsFormOpen(false)}
+            onCreated={handleObjectCreated}
+          />
+        )}
 
         {errorMessage && (
           <p
