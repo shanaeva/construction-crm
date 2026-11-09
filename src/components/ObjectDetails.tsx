@@ -6,6 +6,7 @@ import type {
   UserProfile,
 } from "../types";
 import { CreateTaskForm } from "./CreateTaskForm";
+import { Task } from "./Task";
 
 type Props = {
   object: ConstructionObject;
@@ -18,6 +19,8 @@ export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
   const [tasks, setTasks] = useState<ConstructionTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
   useEffect(() => {
     let isCurrent = true;
 
@@ -59,12 +62,29 @@ export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
 
     if (error) {
       console.error("Refresh tasks error:", error.message);
-      setErrorMessage("Task created, but the task list could not be refreshed.");
+      setErrorMessage("Could not refresh the task list. Please try again.");
     } else {
       setTasks(data);
       setErrorMessage("");
     }
   };
+
+  const handleTaskBack = async () => {
+    await refreshTasks();
+    setSelectedTaskId(null);
+  };
+
+  if (selectedTaskId) {
+    return (
+      <Task
+        taskId={selectedTaskId}
+        object={object}
+        profile={profile}
+        onBack={() => handleTaskBack()}
+        onLogout={onLogout}
+      />
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f5f7f3] px-4 py-10 text-[#263541] sm:px-6">
@@ -137,19 +157,22 @@ export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
           ) : (
             <ul className="space-y-3">
               {tasks.map((task) => (
-                <li
-                  key={task.id}
-                  className="rounded-2xl border border-[#dce3dc] bg-white p-5 shadow-[0_12px_30px_rgba(38,53,65,0.04)]"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <h3 className="font-semibold">{task.title}</h3>
-                    <span className="rounded-full bg-[#edf3ed] px-3 py-1 text-xs font-semibold capitalize text-[#42654c]">
-                      {task.status}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[#65737c]">
-                    {task.description}
-                  </p>
+                <li key={task.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTaskId(task.id)}
+                    className="w-full rounded-2xl border border-[#dce3dc] bg-white p-5 text-left shadow-[0_12px_30px_rgba(38,53,65,0.04)] transition hover:border-[#9cb3a1] focus:outline-none focus:ring-4 focus:ring-[#dceade]"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <h3 className="font-semibold">{task.title}</h3>
+                      <span className="rounded-full bg-[#edf3ed] px-3 py-1 text-xs font-semibold capitalize text-[#42654c]">
+                        {task.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-[#65737c]">
+                      {task.description}
+                    </p>
+                  </button>
                 </li>
               ))}
             </ul>
