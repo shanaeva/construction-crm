@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import type { ConstructionObject, TaskDetails, UserProfile } from "../types";
 import { TaskActions } from "./TaskActions";
+import { EditTaskForm } from "./EditTaskForm";
 import { TaskInformation } from "./TaskInformation";
 import { TaskStatusHistory } from "./TaskStatusHistory";
 
@@ -11,6 +12,8 @@ type Props = {
   profile: UserProfile;
   onBack: () => void;
   onLogout: () => void;
+  onTaskDeleted: () => Promise<void>;
+  onTaskMoved: () => Promise<void>;
 };
 
 type RelatedProfile = {
@@ -22,23 +25,29 @@ type TaskWithProfiles = Omit<TaskDetails, "authorName" | "executorName"> & {
   executor: RelatedProfile | null;
 };
 
-export const Task = ({ taskId, object, profile, onBack, onLogout }: Props) => {
+export const Task = ({
+  taskId,
+  object,
+  profile,
+  onBack,
+  onLogout,
+  onTaskDeleted,
+  onTaskMoved,
+}: Props) => {
   const [task, setTask] = useState<TaskDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const [isEditingTask, setIsEditingTask] = useState(false);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
+  const [taskMutationError, setTaskMutationError] = useState("");
+  const [taskSuccessMessage, setTaskSuccessMessage] = useState("");
 
-  const loadTaskDetails = useCallback(
-    async (showLoading = true) => {
-      if (showLoading) {
-        setIsLoading(true);
-      }
-      setErrorMessage("");
-
-      const { data, error } = await supabase
-        .from("tasks")
-        .select(
-          `
+  const loadTaskDetails = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select(
+        `
             id,
             title,
             description,
@@ -50,62 +59,87 @@ export const Task = ({ taskId, object, profile, onBack, onLogout }: Props) => {
             author:profiles!tasks_author_id_fkey(full_name),
             executor:profiles!tasks_executor_id_fkey(full_name)
           `,
-        )
-        .eq("id", taskId)
-        .maybeSingle();
+      )
+      .eq("id", taskId)
+      .maybeSingle();
 
-      if (error || !data) {
-        if (error) {
-          console.error("Task details error:", error.message);
-        }
-        setErrorMessage(
-          "Task not found or you do not have permission to view it.",
-        );
-        setTask(null);
+    setErrorMessage("");
 
-        if (showLoading) {
-          setIsLoading(false);
-        }
-        return;
+    if (error || !data) {
+      if (error) {
+        console.error("Task details error:", error.message);
       }
+      setErrorMessage(
+        "Task not found or you do not have permission to view it.",
+      );
+      setTask(null);
 
-      const taskData = data as unknown as TaskWithProfiles;
-      setTask({
-        id: taskData.id,
-        title: taskData.title,
-        description: taskData.description,
-        object_id: taskData.object_id,
-        executor_id: taskData.executor_id,
-        author_id: taskData.author_id,
-        status: taskData.status,
-        created_at: taskData.created_at,
-        authorName:
-          taskData.author?.full_name ??
-          (taskData.author_id === profile.id
+      setIsLoading(false);
+      return;
+    }
+
+    const taskData = data as unknown as TaskWithProfiles;
+    setTask({
+      id: taskData.id,
+      title: taskData.title,
+      description: taskData.description,
+      object_id: taskData.object_id,
+      executor_id: taskData.executor_id,
+      author_id: taskData.author_id,
+      status: taskData.status,
+      created_at: taskData.created_at,
+      authorName:
+        taskData.author?.full_name ??
+        (taskData.author_id === profile.id
+          ? profile.full_name
+          : "Profile unavailable"),
+      executorName: taskData.executor_id
+        ? (taskData.executor?.full_name ??
+          (taskData.executor_id === profile.id
             ? profile.full_name
-            : "Profile unavailable"),
-        executorName: taskData.executor_id
-          ? (taskData.executor?.full_name ??
-            (taskData.executor_id === profile.id
-              ? profile.full_name
-              : "Profile unavailable"))
-          : null,
-      });
+            : "Profile unavailable"))
+        : null,
+    });
 
-      if (showLoading) {
-        setIsLoading(false);
-      }
-    },
-    [profile.full_name, profile.id, taskId],
-  );
+    setIsLoading(false);
+  }, [profile.full_name, profile.id, taskId]);
 
   useEffect(() => {
-    loadTaskDetails();
+    Promise.resolve().then(() => loadTaskDetails());
   }, [loadTaskDetails]);
 
   const handleStatusChanged = async () => {
-    await loadTaskDetails(false);
+    await loadTaskDetails();
     setHistoryRefreshKey((key) => key + 1);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!task || !window.confirm(`Delete task "${task.title}"?`)) {
+      return;
+    }
+
+    setIsDeletingTask(true);
+    setTaskMutationError("");
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", task.id)
+      .select("id")
+      .maybeSingle();
+
+    if (error || !data) {
+      console.error("Delete task error:", error?.message ?? "No row returned");
+      setTaskMutationError(
+        error
+          ? "Could not delete the task. Please try again."
+          : "The task was not deleted. Check your manager permissions or whether it still exists.",
+      );
+      setIsDeletingTask(false);
+      return;
+    }
+
+    await onTaskDeleted();
   };
 
   return (
@@ -122,7 +156,7 @@ export const Task = ({ taskId, object, profile, onBack, onLogout }: Props) => {
           </div>
           <button
             type="button"
-            onClick={() => void onLogout()}
+            onClick={() => onLogout()}
             className="rounded-xl border border-[#cfd9d1] bg-white px-4 py-2.5 text-sm font-semibold text-[#42654c] transition hover:bg-[#f5f7f3] focus:outline-none focus:ring-4 focus:ring-[#dceade]"
           >
             Sign out
@@ -150,17 +184,72 @@ export const Task = ({ taskId, object, profile, onBack, onLogout }: Props) => {
           </p>
         ) : task ? (
           <>
-            <TaskInformation task={task} object={object} />
-            <TaskActions
-              task={task}
-              profile={profile}
-              onStatusChanged={handleStatusChanged}
-            />
-            <TaskStatusHistory
-              taskId={taskId}
-              profile={profile}
-              refreshKey={historyRefreshKey}
-            />
+            {taskSuccessMessage && (
+              <p
+                role="status"
+                className="mb-5 rounded-xl border border-[#cfe0d1] bg-[#f2f8f2] px-3.5 py-3 text-sm text-[#42654c]"
+              >
+                {taskSuccessMessage}
+              </p>
+            )}
+            {taskMutationError && (
+              <p
+                role="alert"
+                className="mb-5 rounded-xl border border-[#ebcfca] bg-[#fff7f5] px-3.5 py-3 text-sm text-[#8c3b32]"
+              >
+                {taskMutationError}
+              </p>
+            )}
+            {profile.role === "manager" && (
+              <div className="mb-5 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingTask((isEditing) => !isEditing)}
+                  disabled={isDeletingTask}
+                  className="rounded-xl border border-[#cfd9d1] bg-white px-3.5 py-2 text-sm font-semibold text-[#42654c] disabled:opacity-60"
+                >
+                  {isEditingTask ? "Cancel editing" : "Edit task"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTask()}
+                  disabled={isDeletingTask}
+                  className="rounded-xl border border-[#ebcfca] bg-white px-3.5 py-2 text-sm font-semibold text-[#8c3b32] disabled:opacity-60"
+                >
+                  {isDeletingTask ? "Deleting…" : "Delete task"}
+                </button>
+              </div>
+            )}
+            {isEditingTask ? (
+              <EditTaskForm
+                task={task}
+                onCancel={() => setIsEditingTask(false)}
+                onUpdated={(updatedObjectId) => {
+                  setIsEditingTask(false);
+
+                  if (updatedObjectId !== object.id) {
+                    onTaskMoved();
+                    return;
+                  }
+                  setTaskSuccessMessage("Task updated successfully.");
+                  loadTaskDetails();
+                }}
+              />
+            ) : (
+              <>
+                <TaskInformation task={task} object={object} />
+                <TaskActions
+                  task={task}
+                  profile={profile}
+                  onStatusChanged={handleStatusChanged}
+                />
+                <TaskStatusHistory
+                  taskId={taskId}
+                  profile={profile}
+                  refreshKey={historyRefreshKey}
+                />
+              </>
+            )}
           </>
         ) : null}
       </div>

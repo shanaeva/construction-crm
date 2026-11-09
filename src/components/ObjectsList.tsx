@@ -6,6 +6,7 @@ type Props = {
   profile: UserProfile;
   objects: ConstructionObject[];
   errorMessage: string;
+  successMessage: string;
   onLogout: () => void;
   onSelectObject: (object: ConstructionObject) => void;
   onRefreshObjects: () => void;
@@ -15,6 +16,7 @@ export const ObjectsList = ({
   profile,
   objects,
   errorMessage,
+  successMessage,
   onLogout,
   onSelectObject,
   onRefreshObjects,
@@ -51,7 +53,7 @@ export const ObjectsList = ({
             )}
             <button
               type="button"
-              onClick={() => void onLogout()}
+              onClick={() => onLogout()}
               className="rounded-xl border border-[#cfd9d1] bg-white px-4 py-2.5 text-sm font-semibold text-[#42654c] transition hover:bg-[#f5f7f3] focus:outline-none focus:ring-4 focus:ring-[#dceade]"
             >
               Sign out
@@ -72,6 +74,15 @@ export const ObjectsList = ({
             className="mb-5 rounded-xl border border-[#ebcfca] bg-[#fff7f5] px-3.5 py-3 text-sm leading-5 text-[#8c3b32]"
           >
             {errorMessage}
+          </p>
+        )}
+
+        {successMessage && (
+          <p
+            role="status"
+            className="mb-5 rounded-xl border border-[#cfe0d1] bg-[#f2f8f2] px-3.5 py-3 text-sm leading-5 text-[#42654c]"
+          >
+            {successMessage}
           </p>
         )}
 

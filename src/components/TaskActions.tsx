@@ -94,7 +94,7 @@ export const TaskActions = ({ task, profile, onStatusChanged }: Props) => {
       return;
     }
 
-    void changeTaskStatus("revision", comment);
+    changeTaskStatus("revision", comment);
   };
 
   return (
@@ -113,7 +113,7 @@ export const TaskActions = ({ task, profile, onStatusChanged }: Props) => {
                     setIsRevisionFormOpen(true);
                     setErrorMessage("");
                   } else {
-                    void changeTaskStatus(action.toStatus);
+                    changeTaskStatus(action.toStatus);
                   }
                 }}
                 className="rounded-xl bg-[#52775c] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#42654c] disabled:cursor-not-allowed disabled:opacity-60"

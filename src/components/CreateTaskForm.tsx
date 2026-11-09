@@ -53,7 +53,7 @@ export const CreateTaskForm = ({
       setIsLoadingExecutors(false);
     };
 
-    void getExecutors();
+    getExecutors();
   }, [canCreate, isOpen]);
 
   const resetAndClose = () => {
@@ -121,7 +121,7 @@ export const CreateTaskForm = ({
       {isOpen && (
         <form
           className="mb-5 w-full basis-full space-y-4 rounded-2xl border border-[#dce3dc] bg-white p-5 shadow-[0_12px_30px_rgba(38,53,65,0.04)]"
-          onSubmit={(event) => void handleSubmit(event)}
+          onSubmit={(event) => handleSubmit(event)}
         >
           <div>
             <label

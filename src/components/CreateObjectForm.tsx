@@ -44,7 +44,7 @@ export const CreateObjectForm = ({ onCancel, onCreated }: Props) => {
   return (
     <form
       className="mb-6 space-y-4 rounded-2xl border border-[#dce3dc] bg-white p-5 shadow-[0_12px_30px_rgba(38,53,65,0.04)]"
-      onSubmit={(event) => void handleSubmit(event)}
+      onSubmit={(event) => handleSubmit(event)}
     >
       <div>
         <label

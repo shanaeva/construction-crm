@@ -6,6 +6,7 @@ import type {
   UserProfile,
 } from "../types";
 import { CreateTaskForm } from "./CreateTaskForm";
+import { EditObjectForm } from "./EditObjectForm";
 import { Task } from "./Task";
 
 type Props = {
@@ -13,13 +14,28 @@ type Props = {
   profile: UserProfile;
   onBack: () => void;
   onLogout: () => void;
+  onObjectUpdated: (object: ConstructionObject) => void;
+  onObjectDeleted: (objectId: string) => void;
+  successMessage: string;
 };
 
-export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
+export const ObjectDetails = ({
+  object,
+  profile,
+  onBack,
+  onLogout,
+  onObjectUpdated,
+  onObjectDeleted,
+  successMessage,
+}: Props) => {
   const [tasks, setTasks] = useState<ConstructionTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [taskListSuccessMessage, setTaskListSuccessMessage] = useState("");
+  const [isEditingObject, setIsEditingObject] = useState(false);
+  const [isDeletingObject, setIsDeletingObject] = useState(false);
+  const [objectMutationError, setObjectMutationError] = useState("");
 
   useEffect(() => {
     let isCurrent = true;
@@ -74,6 +90,47 @@ export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
     setSelectedTaskId(null);
   };
 
+  const handleTaskDeleted = async () => {
+    await refreshTasks();
+    setTaskListSuccessMessage("Task deleted successfully.");
+    setSelectedTaskId(null);
+  };
+
+  const handleTaskMoved = async () => {
+    await refreshTasks();
+    setTaskListSuccessMessage("Task updated successfully.");
+    setSelectedTaskId(null);
+  };
+
+  const handleDeleteObject = async () => {
+    if (!window.confirm(`Delete "${object.name}" and all of its tasks?`)) {
+      return;
+    }
+
+    setIsDeletingObject(true);
+    setObjectMutationError("");
+
+    const { data, error } = await supabase
+      .from("objects")
+      .delete()
+      .eq("id", object.id)
+      .select("id")
+      .maybeSingle();
+
+    if (error || !data) {
+      console.error("Delete object error:", error?.message ?? "No row returned");
+      setObjectMutationError(
+        error
+          ? "Could not delete the object. Please try again."
+          : "The object was not deleted. Check your manager permissions or whether it still exists.",
+      );
+      setIsDeletingObject(false);
+      return;
+    }
+
+    onObjectDeleted(object.id);
+  };
+
   if (selectedTaskId) {
     return (
       <Task
@@ -82,6 +139,8 @@ export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
         profile={profile}
         onBack={() => handleTaskBack()}
         onLogout={onLogout}
+        onTaskDeleted={handleTaskDeleted}
+        onTaskMoved={handleTaskMoved}
       />
     );
   }
@@ -100,7 +159,7 @@ export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
           </div>
           <button
             type="button"
-            onClick={() => void onLogout()}
+            onClick={() => onLogout()}
             className="rounded-xl border border-[#cfd9d1] bg-white px-4 py-2.5 text-sm font-semibold text-[#42654c] transition hover:bg-[#f5f7f3] focus:outline-none focus:ring-4 focus:ring-[#dceade]"
           >
             Sign out
@@ -115,13 +174,76 @@ export const ObjectDetails = ({ object, profile, onBack, onLogout }: Props) => {
           ← All objects
         </button>
 
-        <section className="mb-6 rounded-2xl border border-[#dce3dc] bg-white p-6 shadow-[0_16px_45px_rgba(38,53,65,0.05)] sm:p-8">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            {object.name}
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-[#65737c]">
-            {object.address}
+        {successMessage && (
+          <p
+            role="status"
+            className="mb-5 rounded-xl border border-[#cfe0d1] bg-[#f2f8f2] px-3.5 py-3 text-sm text-[#42654c]"
+          >
+            {successMessage}
           </p>
+        )}
+
+        {objectMutationError && (
+          <p
+            role="alert"
+            className="mb-5 rounded-xl border border-[#ebcfca] bg-[#fff7f5] px-3.5 py-3 text-sm text-[#8c3b32]"
+          >
+            {objectMutationError}
+          </p>
+        )}
+
+        {taskListSuccessMessage && (
+          <p
+            role="status"
+            className="mb-5 rounded-xl border border-[#cfe0d1] bg-[#f2f8f2] px-3.5 py-3 text-sm text-[#42654c]"
+          >
+            {taskListSuccessMessage}
+          </p>
+        )}
+
+        <section className="mb-6 rounded-2xl border border-[#dce3dc] bg-white p-6 shadow-[0_16px_45px_rgba(38,53,65,0.05)] sm:p-8">
+          {isEditingObject ? (
+            <EditObjectForm
+              object={object}
+              onCancel={() => setIsEditingObject(false)}
+              onUpdated={(updatedObject) => {
+                onObjectUpdated(updatedObject);
+                setIsEditingObject(false);
+              }}
+            />
+          ) : (
+            <>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                    {object.name}
+                  </h1>
+                  <p className="mt-2 text-sm leading-6 text-[#65737c]">
+                    {object.address}
+                  </p>
+                </div>
+                {profile.role === "manager" && (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingObject(true)}
+                      className="rounded-xl border border-[#cfd9d1] bg-white px-3.5 py-2 text-sm font-semibold text-[#42654c]"
+                    >
+                      Edit object
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteObject()}
+                      disabled={isDeletingObject}
+                      className="rounded-xl border border-[#ebcfca] bg-white px-3.5 py-2 text-sm font-semibold text-[#8c3b32] disabled:opacity-60"
+                    >
+                      {isDeletingObject ? "Deleting…" : "Delete object"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </section>
 
         <section aria-labelledby="tasks-title">

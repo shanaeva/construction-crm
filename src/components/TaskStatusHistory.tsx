@@ -66,7 +66,7 @@ export const TaskStatusHistory = ({ taskId, profile, refreshKey }: Props) => {
       setIsLoading(false);
     };
 
-    void loadHistory();
+    loadHistory();
 
     return () => {
       isCurrent = false;

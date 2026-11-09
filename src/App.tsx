@@ -1,4 +1,4 @@
-import { useEffect, useState, type SubmitEvent } from "react";
+import { useCallback, useEffect, useState, type SubmitEvent } from "react";
 import { supabase } from "./lib/supabaseClient";
 import type { ConstructionObject, UserProfile } from "./types";
 import { ObjectsList } from "./components/ObjectsList";
@@ -10,12 +10,13 @@ const App = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [objects, setObjects] = useState<ConstructionObject[]>([]);
   const [selectedObject, setSelectedObject] =
     useState<ConstructionObject | null>(null);
 
-  const getObjects = async () => {
+  const getObjects = useCallback(async () => {
     const { data: objectsData, error: objectsError } = await supabase
       .from("objects")
       .select("id, name, address, created_at")
@@ -29,9 +30,9 @@ const App = () => {
 
     setObjects(objectsData);
     setErrorMessage("");
-  };
+  }, []);
 
-  const getProfile = async (authUserId: string) => {
+  const getProfile = useCallback(async (authUserId: string) => {
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("id, full_name, role")
@@ -47,6 +48,24 @@ const App = () => {
     }
     setUserProfile(profile);
     await getObjects();
+  }, [getObjects]);
+
+  const handleObjectUpdated = (updatedObject: ConstructionObject) => {
+    setSelectedObject(updatedObject);
+    setObjects((currentObjects) =>
+      currentObjects.map((object) =>
+        object.id === updatedObject.id ? updatedObject : object,
+      ),
+    );
+    setSuccessMessage("Object updated successfully.");
+  };
+
+  const handleObjectDeleted = async (deletedObjectId: string) => {
+    setSelectedObject(null);
+    setObjects((currentObjects) =>
+      currentObjects.filter((object) => object.id !== deletedObjectId),
+    );
+    setSuccessMessage("Object deleted successfully.");
   };
 
   useEffect(() => {
@@ -66,11 +85,12 @@ const App = () => {
     };
 
     restoreSession();
-  }, []);
+  }, [getProfile]);
 
   const handleLogin = async () => {
     setIsLoading(true);
     setErrorMessage("");
+    setSuccessMessage("");
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -130,6 +150,9 @@ const App = () => {
           profile={userProfile}
           onBack={() => setSelectedObject(null)}
           onLogout={handleLogout}
+          onObjectUpdated={handleObjectUpdated}
+          onObjectDeleted={handleObjectDeleted}
+          successMessage={successMessage}
         />
       );
     }
@@ -139,8 +162,12 @@ const App = () => {
         profile={userProfile}
         objects={objects}
         errorMessage={errorMessage}
+        successMessage={successMessage}
         onLogout={handleLogout}
-        onSelectObject={setSelectedObject}
+        onSelectObject={(object) => {
+          setSuccessMessage("");
+          setSelectedObject(object);
+        }}
         onRefreshObjects={getObjects}
       />
     );
@@ -171,7 +198,7 @@ const App = () => {
           className="space-y-5"
           onSubmit={(event: SubmitEvent<HTMLFormElement>) => {
             event.preventDefault();
-            void handleLogin();
+            handleLogin();
           }}
         >
           <div>
