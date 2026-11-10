@@ -1,3 +1,9 @@
+BEGIN;
+
+GRANT UPDATE (name, address)
+ON TABLE public.objects
+TO authenticated;
+
 CREATE POLICY "managers_update_objects"
 ON public.objects
 FOR UPDATE
@@ -18,3 +24,5 @@ WITH CHECK (
       AND profiles.role = 'manager'
   )
 );
+
+COMMIT;
