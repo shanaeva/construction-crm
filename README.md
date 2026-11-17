@@ -1,75 +1,132 @@
-# React + TypeScript + Vite
+# Construction CRM
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Мини-CRM для управления строительными объектами и задачами. Приложение позволяет постановщикам создавать объекты и задачи, назначать исполнителей и контролировать выполнение работ.
 
-Currently, two official plugins are available:
+**Демо:** https://construction-crm-five-gamma.vercel.app/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Возможности
 
-## React Compiler
+- Авторизация пользователей по email и паролю.
+- Разделение пользователей на роли: постановщик и исполнитель.
+- Просмотр строительных объектов и связанных с ними задач.
+- Создание и назначение задач исполнителям.
+- Просмотр списка задач, назначенных текущему пользователю.
+- Управление статусами задач в соответствии с ролевой моделью.
+- История изменения статусов задач с информацией об авторе, времени и комментарии.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Технологии
 
-## Expanding the ESLint configuration
+**Frontend:**
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+**Backend:**
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Supabase
+- PostgreSQL
+- Supabase Auth
+- Row Level Security (RLS)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Запуск проекта локально
 
+### 1. Клонирование репозитория
+
+```bash
+git clone <REPOSITORY_URL>
+cd construction-crm
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Установка зависимостей
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
 ```
+
+### 3. Настройка переменных окружения
+
+Создайте файл `.env.local` в корне проекта:
+
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+```
+
+Значения можно получить в настройках проекта Supabase.
+
+### 4. Запуск приложения
+
+```bash
+npm run dev
+```
+
+Приложение будет доступно по адресу, указанному Vite в терминале (обычно `http://localhost:5173`).
+
+## Доступные команды
+
+| Команда           | Описание                                |
+| ----------------- | --------------------------------------- |
+| `npm run dev`     | Запуск локального сервера разработки    |
+| `npm run build`   | Проверка TypeScript и production-сборка |
+| `npm run preview` | Просмотр production-сборки локально     |
+| `npm run lint`    | Проверка кода ESLint                    |
+
+## Структура базы данных
+
+Основные таблицы PostgreSQL:
+
+- `profiles` — профили пользователей и их роли.
+- `objects` — строительные объекты.
+- `tasks` — задачи, связанные с объектами.
+- `task_status_history` — история изменения статусов задач.
+
+## Статусы задач
+
+Поддерживаются следующие переходы:
+
+| Текущий статус | Новый статус | Кто может изменить      |
+| -------------- | ------------ | ----------------------- |
+| Новая          | В работе     | Назначенный исполнитель |
+| В работе       | На проверке  | Назначенный исполнитель |
+| На проверке    | Принята      | Постановщик             |
+| На проверке    | На доработке | Постановщик             |
+| На доработке   | В работе     | Назначенный исполнитель |
+
+При возврате задачи на доработку комментарий обязателен. Недопустимые переходы статусов запрещены.
+
+## Безопасность
+
+- Row Level Security (RLS) включён для основных таблиц.
+- Доступ к данным ограничивается на уровне базы данных с учётом роли пользователя.
+- Исполнители имеют доступ только к назначенным им задачам.
+- Проверка допустимости переходов статусов выполняется на стороне базы данных.
+- История изменения статусов защищена от прямого изменения через API.
+- Для клиентского приложения используется только публичный Supabase Publishable Key.
+- Секретный `service_role` key не используется на фронтенде.
+
+## Миграции базы данных
+
+Миграции находятся в директории `supabase/migrations/`.
+
+Они описывают создание таблиц, функций, триггеров, RLS-политик и дополнительных ограничений доступа.
+
+Для локального применения миграций с помощью Supabase CLI:
+
+```bash
+supabase start
+supabase db reset
+```
+
+**Важно:** `supabase db reset` пересоздаёт локальную базу данных и удаляет её данные. Не запускайте эту команду для production-базы.
+
+## Деплой
+
+Frontend опубликован на Vercel:
+
+https://construction-crm-five-gamma.vercel.app/
+
+Backend и база данных размещены в Supabase.
+
+Для production необходимо настроить переменные окружения `VITE_SUPABASE_URL` и `VITE_SUPABASE_PUBLISHABLE_KEY` в настройках проекта Vercel.
