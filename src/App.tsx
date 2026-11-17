@@ -131,6 +131,8 @@ const App = () => {
     setUserProfile(null);
     setSelectedObject(null);
     setObjects([]);
+    setEmail("");
+    setPassword("");
     setErrorMessage("");
   };
 
